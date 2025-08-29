@@ -1,4 +1,4 @@
-Parameters:
+-Parameters:
     App:
         Type: String
         Description: Your application's name.

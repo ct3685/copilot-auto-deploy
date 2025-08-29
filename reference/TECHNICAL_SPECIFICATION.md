@@ -13,16 +13,164 @@
 ```
 src/
 ├── bin.ts          # CLI entry point (thin wrapper)
-├── deploy.ts       # Main orchestration logic
-├── aws.ts          # AWS-specific operations
-├── printers.ts     # UI/console output (pure functions)
+├── config.ts       # Configuration management (NEW - priority)
+├── setup.ts        # Interactive setup wizard (NEW - priority)
+├── templates.ts    # Template system management (NEW - priority)
+├── deploy.ts       # Main orchestration logic (ported from copilot-auto-deploy.sh)
+├── aws.ts          # AWS-specific operations (ported from bash script)
+├── printers.ts     # UI/console output (pure functions - ported from bash script)
 ├── exec.ts         # Command execution (abstraction layer)
-└── utils.ts        # Utilities and validators (pure functions)
+├── utils.ts        # Utilities and validators (pure functions)
+├── domain-switch.ts # Domain switching logic (ported from copilot-switch-app.sh)
+└── env-files.ts    # Environment file creation (ported from create-env-files.js)
 ```
 
 ## Core Modules Specification
 
-### 1. printers.ts - UI Components
+### 1. config.ts - Configuration Management
+**Purpose**: Manage configuration files with intelligent defaults and validation
+
+**Key Functions**:
+```typescript
+export interface CopilotAutoConfig {
+  version: string;
+  project: ProjectConfig;
+  environments: Record<string, EnvironmentConfig>;
+  services: Record<string, ServiceConfig>;
+  aws: AwsConfig;
+  variables: VariableConfig;
+}
+
+export interface ProjectConfig {
+  name: string;
+  domain: string;
+  defaultEnvironment: string;
+}
+
+export interface EnvironmentConfig {
+  subdomain: string;
+  services: string[];
+  autoConfirm: boolean;
+}
+
+export interface ServiceConfig {
+  template: string;
+  healthCheck: string;
+  resources: ResourceConfig;
+}
+
+export interface AwsConfig {
+  profile: string;
+  region: string;
+  autoConfirm: boolean;
+}
+
+export interface VariableConfig {
+  required: string[];
+  optional: string[];
+}
+
+export async function loadConfig(
+  configPath?: string
+): Promise<CopilotAutoConfig | null>
+
+export async function validateConfig(
+  config: CopilotAutoConfig
+): Promise<ValidationResult>
+
+export async function createDefaultConfig(
+  projectPath: string
+): Promise<CopilotAutoConfig>
+```
+
+**Design Decisions**:
+- Configuration-first approach with intelligent defaults
+- JSON format for simplicity and readability
+- Validation with helpful error messages
+- Auto-discovery of configuration files
+- Environment-specific overrides
+
+### 2. setup.ts - Interactive Setup Wizard
+**Purpose**: Guide developers through initial configuration setup
+
+**Key Functions**:
+```typescript
+export interface SetupWizard {
+  discoverProject(): Promise<ProjectInfo>;
+  selectTemplate(): Promise<TemplateInfo>;
+  configureEnvironments(): Promise<EnvironmentConfig[]>;
+  selectServices(): Promise<string[]>;
+  configureVariables(): Promise<VariableConfig>;
+  configureAws(): Promise<AwsConfig>;
+  generateConfig(): Promise<CopilotAutoConfig>;
+}
+
+export async function runSetupWizard(
+  projectPath: string
+): Promise<CopilotAutoConfig>
+
+export async function createConfigFile(
+  config: CopilotAutoConfig,
+  path: string
+): Promise<void>
+```
+
+**Design Decisions**:
+- Interactive prompts with sensible defaults
+- Project auto-discovery
+- Template selection (AAI-first, then universal)
+- Step-by-step guidance
+- Configuration file generation
+- Validation at each step
+
+### 3. templates.ts - Template System Management
+**Purpose**: Manage AAI-specific and universal templates
+
+**Key Functions**:
+```typescript
+export interface TemplateInfo {
+  name: string;
+  type: 'aai' | 'generic' | 'custom';
+  description: string;
+  services: Record<string, ServiceTemplate>;
+  variables: VariableRequirement[];
+  validation: ValidationRules;
+  defaults: Record<string, any>;
+}
+
+export interface ServiceTemplate {
+  name: string;
+  type: string;
+  manifest: string;
+  resources: ResourceConfig;
+  variables: VariableRequirement[];
+  healthCheck: string;
+}
+
+export async function loadTemplate(
+  templateName: string
+): Promise<TemplateInfo>
+
+export async function listTemplates(): Promise<TemplateInfo[]>
+
+export async function validateTemplate(
+  template: TemplateInfo
+): Promise<ValidationResult>
+
+export async function createServiceFromTemplate(
+  template: ServiceTemplate,
+  config: ServiceConfig
+): Promise<void>
+```
+
+**Design Decisions**:
+- AAI templates as default with universal fallback
+- Template inheritance for customization
+- Service-specific templates with validation
+- Manifest generation from templates
+- Resource configuration templates
+
+### 3. printers.ts - UI Components
 **Purpose**: Handle all console output with consistent styling
 
 **Key Functions**:
@@ -94,7 +242,7 @@ export async function askWithTimeout(
 - Type-safe implementations
 
 ### 4. aws.ts - AWS Operations
-**Purpose**: Handle AWS-specific operations and verification
+**Purpose**: Handle AWS-specific operations and verification (ported from bash script)
 
 **Key Functions**:
 ```typescript
@@ -110,13 +258,14 @@ export async function verifyAwsAccount(
 ```
 
 **Design Decisions**:
-- Comprehensive token expiry detection
+- Comprehensive token expiry detection (3 patterns: "Token has expired and refresh failed", "ExpiredToken", "The security token included in the request is expired")
 - User confirmation for account verification
 - Clear error messages with actionable steps
 - Support for both interactive and non-interactive modes
+- AWS SSO profile validation and guidance
 
 ### 5. deploy.ts - Main Workflow
-**Purpose**: Orchestrate the complete deployment process
+**Purpose**: Orchestrate the complete deployment process (ported from copilot-auto-deploy.sh)
 
 **Key Functions**:
 ```typescript
@@ -134,12 +283,65 @@ export async function deployFlow(opts: DeployOptions): Promise<void>
 ```
 
 **Design Decisions**:
-- Phased approach for clear progress indication
+- Phased approach for clear progress indication (8 phases: Prerequisites, Domain Selection, Environment Selection, Application Setup, Copilot Application, Environment Management, Service Selection, Service Deployment)
 - Comprehensive error handling at each phase
-- Support for partial deployments
-- Environment variable management
+- Support for partial deployments (flowise and web services)
+- Environment variable management (CLIENT_DOMAIN, AUTH0_BASE_URL)
+- 15-second timeout for service selection with default to "both"
 
-### 6. bin.ts - CLI Interface
+### 6. domain-switch.ts - Domain Switching Logic
+**Purpose**: Handle domain switching and app name generation (ported from copilot-switch-app.sh)
+
+**Key Functions**:
+```typescript
+export interface DomainSwitchResult {
+  appName: string;
+  clientDomain: string;
+  workspacePath: string;
+}
+
+export async function switchAppContext(
+  clientDomain: string
+): Promise<DomainSwitchResult>
+
+export function generateAppName(domain: string): string
+```
+
+**Design Decisions**:
+- Automatic app name generation from domain (e.g., "client.theanswer.ai" → "client-aai")
+- Special handling for "aai" domain
+- Validation of domain format (no protocols)
+- Workspace file creation with app name
+- Support for staging prefixes
+
+### 7. env-files.ts - Environment File Creation
+**Purpose**: Create and manage environment files (ported from create-env-files.js)
+
+**Key Functions**:
+```typescript
+export interface EnvFileOptions {
+  environment: string;
+  autoTemplates?: boolean;
+  interactive?: boolean;
+}
+
+export async function createEnvFiles(
+  options: EnvFileOptions
+): Promise<boolean>
+
+export async function validateConfiguration(
+  vars: Record<string, string>
+): Promise<ValidationResult>
+```
+
+**Design Decisions**:
+- Template-based environment file generation
+- Configuration validation with required variables
+- Support for both interactive and non-interactive modes
+- Auto-template creation for new apps
+- Comprehensive variable validation (AUTH0, S3, Redis, etc.)
+
+### 8. bin.ts - CLI Interface
 **Purpose**: Handle CLI argument parsing and orchestration
 
 **Key Functions**:
@@ -171,17 +373,18 @@ copilot-auto [options]
 ```
 
 ### Options
-| Option              | Type    | Required | Description                            |
-| ------------------- | ------- | -------- | -------------------------------------- |
-| `-e, --env`         | string  | No       | Environment (staging\|prod)            |
-| `-s, --subdomain`   | string  | No       | Client domain key (e.g., acme)         |
-| `--services`        | string  | No       | Comma-separated services (flowise,web) |
-| `--yes`             | boolean | No       | Auto-confirm prompts                   |
-| `--non-interactive` | boolean | No       | Fail if required values missing        |
-| `--debug`           | boolean | No       | Verbose output                         |
-| `--dry-run`         | boolean | No       | Show commands without executing        |
-| `--config`          | string  | No       | Path to configuration file             |
-| `--init`            | boolean | No       | Initialize configuration and templates |
+| Option              | Type    | Required | Description                                                     |
+| ------------------- | ------- | -------- | --------------------------------------------------------------- |
+| `-e, --env`         | string  | No       | Environment (staging\|prod)                                     |
+| `-s, --subdomain`   | string  | No       | Client domain key (e.g., acme)                                  |
+| `--services`        | string  | No       | Comma-separated services (flowise,web)                          |
+| `--yes`             | boolean | No       | Auto-confirm prompts                                            |
+| `--non-interactive` | boolean | No       | Fail if required values missing                                 |
+| `--debug`           | boolean | No       | Verbose output                                                  |
+| `--dry-run`         | boolean | No       | Show commands without executing                                 |
+| `--config`          | string  | No       | Path to configuration file (default: copilot/copilot-auto.json) |
+| `--init`            | boolean | No       | Initialize configuration and templates                          |
+| `--setup`           | boolean | No       | Run interactive setup wizard                                    |
 
 ### Exit Codes
 | Code | Meaning                      |
@@ -393,17 +596,27 @@ demo/minimal-app/
 
 ### Service Specifications
 
-#### flowise Service
-- **Framework**: FastAPI (Python)
-- **Resources**: 0.25 vCPU, 0.5GB RAM
+#### flowise Service (ported from existing)
+- **Framework**: Node.js/Express (ported from existing manifest.yml)
+- **Resources**: 0.25 vCPU, 0.5GB RAM (minimal for demo)
 - **Health Check**: `/api/v1/ping`
-- **Features**: Minimal API with health endpoint
+- **Features**: 
+  - Load Balanced Web Service
+  - S3 storage integration
+  - Redis caching
+  - PostgreSQL database
+  - Auth0 integration
+  - Lacework sidecar
 
-#### web Service
-- **Framework**: Static HTML + Nginx
-- **Resources**: 0.25 vCPU, 0.5GB RAM
+#### web Service (ported from existing)
+- **Framework**: Next.js (ported from existing manifest.yml)
+- **Resources**: 0.25 vCPU, 0.5GB RAM (minimal for demo)
 - **Health Check**: `/healthcheck`
-- **Features**: Static page with health endpoint
+- **Features**:
+  - Load Balanced Web Service
+  - Static file serving
+  - Auth0 integration
+  - Environment variable injection
 
 ### Resource Constraints
 - **CPU**: 0.25 vCPU per service
@@ -422,11 +635,19 @@ demo/minimal-app/
     "lib": ["ES2023"],
     "module": "ES2022",
     "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   }
 }
 ```
@@ -438,7 +659,14 @@ export default defineConfig([
     entry: {
       bin: "src/bin.ts",
       deploy: "src/deploy.ts",
-      // ... other entries
+      config: "src/config.ts",
+      setup: "src/setup.ts",
+      aws: "src/aws.ts",
+      printers: "src/printers.ts",
+      exec: "src/exec.ts",
+      utils: "src/utils.ts",
+      "domain-switch": "src/domain-switch.ts",
+      "env-files": "src/env-files.ts"
     },
     format: ["esm"],
     outDir: "dist/esm",
@@ -446,17 +674,23 @@ export default defineConfig([
     sourcemap: true,
     dts: true,
     clean: true,
-    banner: {
-      js: (name) => name === "bin" ? "#!/usr/bin/env node" : ""
-    }
+    treeshake: true,
+    minify: false
   },
   {
-    entry: { deploy: "src/deploy.ts" },
+    entry: {
+      deploy: "src/deploy.ts",
+      config: "src/config.ts",
+      setup: "src/setup.ts"
+    },
     format: ["cjs"],
     outDir: "dist/cjs",
     target: "node20",
     sourcemap: true,
-    clean: false
+    dts: false,
+    clean: false,
+    treeshake: true,
+    minify: false
   }
 ]);
 ```
@@ -466,8 +700,10 @@ export default defineConfig([
 ### package.json Structure
 ```json
 {
-  "name": "@your-scope/copilot-auto",
+  "name": "@theanswer/copilot-auto",
   "version": "1.0.0",
+  "description": "Make AWS Copilot deployments easier with intelligent configuration management",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "copilot-auto": "./dist/esm/bin.js"
@@ -479,13 +715,32 @@ export default defineConfig([
       "types": "./dist/esm/deploy.d.ts"
     }
   },
+  "files": [
+    "dist",
+    "templates",
+    "scripts",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=20.0.0"
   },
   "dependencies": {
     "commander": "^12.1.0",
     "execa": "^9.3.0",
-    "prompts": "^2.4.2"
+    "prompts": "^2.4.2",
+    "js-yaml": "^4.1.0",
+    "chalk": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.1",
+    "@types/js-yaml": "^4.0.9",
+    "eslint": "^9.12.0",
+    "tsup": "^8.1.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1"
   }
 }
 ```
@@ -568,6 +823,15 @@ jobs:
 - No secrets logged to console
 - Environment variables handled securely
 - AWS credentials not exposed in output
+- Use AWS Secrets Manager for sensitive data
+- Implement secure credential rotation
+
+### Package Security
+- All dependencies must be latest non-vulnerable versions
+- Regular vulnerability scanning with npm audit
+- Automated security scanning in CI/CD pipeline
+- Dependency pinning for reproducible builds
+- Monthly security audits and updates
 
 ### Command Injection Prevention
 - Commands built with proper argument arrays

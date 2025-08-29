@@ -1,12 +1,16 @@
 # Copilot Auto-Deploy Package Development Plan
 
 ## Overview
-Transform the existing bash script (`copilot-auto-deploy.sh`) and Node.js environment file creator (`create-env-files.js`) into a modern TypeScript ESM npm package that makes Copilot deployments easier for developers through intelligent configuration management, interactive prompts, and automated workflows.
+Transform the existing bash script (`copilot-auto-deploy.sh`) and Node.js environment file creator (`create-env-files.js`) into a modern TypeScript ESM-first npm package (Node 20+ minimum) that makes Copilot deployments easier for developers. Built with AAI as the premier template and universal capabilities for broader adoption. Features intelligent configuration management, interactive prompts, automated workflows, and a comprehensive template system. Built with the latest development standards including ES modules as primary, dual ESM/CJS compatibility, and modern tooling.
 
 ## Project Goals
+- ✅ **AAI-First Design** - Premier template with zero-config setup for AAI projects
+- ✅ **Universal Capabilities** - Extensible for any domain and service type
+- ✅ **Template System** - Comprehensive template inheritance and customization
 - ✅ **Developer-friendly configuration management** - Simple config files with intelligent defaults
 - ✅ **Interactive and automated workflows** - Guided setup with fallback to prompts
-- ✅ **Modern TypeScript ESM package** (2025 standards)
+- ✅ **Modern TypeScript ESM-first package** (2025 standards with Node 20+)
+- ✅ **ES Modules as primary** with dual ESM/CJS compatibility
 - ✅ **Comprehensive unit and integration testing**
 - ✅ **Minimal-cost demo deployments** for validation
 - ✅ **CI/CD pipeline** with automated testing
@@ -33,9 +37,16 @@ copilot-auto/
 │   ├── config.ts           # Configuration management
 │   └── setup.ts            # Interactive setup wizard
 ├── templates/              # Service templates
-│   ├── flowise/            # Flowise service template
-│   ├── web/                # Web service template
-│   └── common/             # Common templates
+│   ├── aai/                # AAI-specific templates (default)
+│   │   ├── flowise/        # AAI Flowise template
+│   │   ├── web/            # AAI Web template
+│   │   └── common/         # AAI common configurations
+│   ├── generic/            # Universal templates
+│   │   ├── nodejs/         # Generic Node.js template
+│   │   ├── python/         # Generic Python template
+│   │   ├── static/         # Generic static site template
+│   │   └── api/            # Generic API template
+│   └── custom/             # User-defined templates
 ├── scripts/                # Vendor scripts (for backward compatibility)
 │   ├── copilot-switch-app.sh
 │   └── create-env-files.js
@@ -58,19 +69,43 @@ copilot-auto/
 ```
 
 ### 1.2 Package Configuration
-- **TypeScript ESM** with dual build (ESM + CJS compatibility)
-- **Node 20+** requirement
+- **TypeScript ESM-first** with dual build (ESM primary + CJS compatibility)
+- **Node 20+** minimum requirement (latest LTS)
+- **ES Modules** as primary module system with `"type": "module"`
 - **Modern dependencies**: execa@9, commander@12, prompts@2, js-yaml@4
-- **Build tool**: tsup for efficient bundling
-- **Testing**: vitest with coverage
+- **Build tool**: tsup for efficient bundling with tree-shaking
+- **Testing**: vitest with coverage and ESM support
+- **Package exports**: Modern conditional exports for dual compatibility
 
 ### 1.3 Development Environment Setup
-- ESLint configuration
-- Prettier formatting
-- Git hooks (husky)
-- Conventional commits
+- **ESLint configuration** with TypeScript and ESM support
+- **Prettier formatting** with modern rules
+- **Git hooks** (husky) for pre-commit checks
+- **Conventional commits** for automated releases
+- **Modern Node.js tooling** (pnpm, latest npm)
+- **ESM-aware development** with proper import/export syntax
 
 ## Phase 2: Core Implementation (Week 2)
+
+### Implementation Strategy: AAI-First, Universal-Capable
+
+#### Phase 2A: AAI-First Implementation (Week 2)
+- **AAI-specific templates** - Flowise and web service templates
+- **AAI branding** - TheAnswer AI branding and defaults
+- **Zero-config setup** - Perfect compatibility with existing workflow
+- **AAI validation rules** - Domain and service-specific validation
+
+#### Phase 2B: Universal Foundation (Week 3)
+- **Template system** - Extensible template architecture
+- **Generic templates** - Node.js, Python, static, API templates
+- **Configuration abstraction** - Domain-agnostic configuration
+- **Template inheritance** - Customization and override system
+
+#### Phase 2C: Ecosystem Growth (Week 4)
+- **Template marketplace** - Community template sharing
+- **Plugin system** - Custom integrations and extensions
+- **Documentation** - Template development guides
+- **Examples** - Real-world usage examples
 
 ### 2.1 Configuration Management System
 **Purpose**: Make deployments easier through intelligent configuration
@@ -164,6 +199,8 @@ copilot-auto/
 10. **bin.ts** - CLI interface
 
 ### 2.2 Key Features Implementation
+- **AAI-First Design** - Zero-config setup for AAI projects with branded experience
+- **Universal Template System** - Extensible templates for any domain/service
 - **Configuration-first approach** - Config files with intelligent defaults
 - **Interactive setup wizard** - Guided initial configuration
 - **Fallback to prompts** - When config is missing or incomplete
@@ -172,6 +209,7 @@ copilot-auto/
 - **Environment file creation** with validation and templates
 - **Copilot app/environment management**
 - **Service deployment orchestration** (flowise and web)
+- **Template inheritance** and customization
 - **Proper error handling** and exit codes
 - **Signal handling** (SIGINT/SIGTERM)
 
@@ -316,7 +354,10 @@ jobs:
 ### 6.4 Performance & Security
 - **Startup time** optimization
 - **Memory usage** profiling
-- **Security audit** - Dependency scanning
+- **Security audit** - Dependency scanning and vulnerability checks
+- **Package vulnerability scanning** - All dependencies must be latest non-vulnerable versions
+- **Regular security audits** - Monthly dependency vulnerability checks
+- **Security-focused CI/CD** - Automated vulnerability scanning in pipeline
 - **Cross-platform** testing
 
 ## Implementation Priority Matrix
@@ -370,6 +411,8 @@ jobs:
 - **Build time** < 30 seconds
 - **Startup time** < 2 seconds
 - **Zero critical vulnerabilities**
+- **Zero package vulnerabilities** - All dependencies scanned and updated
+- **Security audit score** 100% - No security issues detected
 
 ### Quality Metrics
 - **Zero production bugs** in core workflow

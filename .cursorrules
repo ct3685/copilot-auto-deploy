@@ -1,0 +1,85 @@
+# Cursor Rules for copilot-auto-deploy Repository
+
+## Repository Boundary
+- **STRICTLY FORBIDDEN**: Any commands that would navigate outside `~/repos/copilot-auto-deploy`
+- **ALLOWED**: All operations within the repository directory and its subdirectories
+- **REQUIRED**: All file operations must stay within the repository boundary
+
+## Command Execution Permissions
+
+### Always Allowed (No Confirmation Required)
+- **Development Commands**:
+  - `npm run build`, `npm run dev`, `npm run start`
+  - `npm run test`, `npm run test:watch`, `npm run test:coverage`
+  - `npm run lint`, `npm run lint:fix`
+  - `npm run type-check`, `npm run clean`
+  - `npm run demo:setup`, `npm run demo:deploy`, `npm run demo:cleanup`
+  - `npm install`, `npm ci`, `npm update`
+  - `npx` commands for development tools
+
+- **File Operations**:
+  - Reading any file within the repository
+  - Creating new files within the repository
+  - Editing existing files within the repository
+  - Deleting files within the repository (with safety checks)
+
+- **Git Operations** (within repository):
+  - `git status`, `git log`, `git diff`, `git show`
+  - `git add`, `git commit` (with meaningful messages)
+  - `git branch`, `git checkout`, `git merge`
+  - `git pull`, `git push` (to appropriate remotes)
+
+- **Build Tools**:
+  - `tsup` (TypeScript bundling)
+  - `tsx` (TypeScript execution)
+  - `vitest` (testing)
+  - `eslint` (linting)
+  - `prettier` (formatting)
+
+### Require Confirmation
+- **Destructive Operations**:
+  - `git reset --hard`, `git clean -fd`
+  - `rm -rf` commands
+  - `npm uninstall` (package removal)
+  - Any commands that modify system files outside the repository
+
+- **External Operations**:
+  - AWS CLI commands (copilot, aws, etc.)
+  - Docker commands
+  - Network requests or API calls
+  - Installation of global packages
+
+## Safety Measures
+
+### Navigation Restrictions
+- **BLOCKED**: `cd ..`, `cd ~`, `cd /`, or any navigation outside repository
+- **ALLOWED**: `cd` within repository subdirectories
+- **ENFORCED**: Working directory must always be within `~/repos/copilot-auto-deploy`
+
+### File Operation Safety
+- **REQUIRED**: Backup confirmation for major file deletions
+- **ENFORCED**: All file paths must be relative to repository root
+- **PROTECTED**: Configuration files (.git, package.json, etc.) require explicit confirmation for major changes
+
+### Development Workflow
+- **ENCOURAGED**: Use npm scripts from package.json
+- **SUPPORTED**: TypeScript development with hot reload
+- **ENABLED**: Testing and linting workflows
+- **ALLOWED**: Git workflow operations
+
+## Error Handling
+- **AUTOMATIC**: Retry failed npm installs
+- **SAFE**: Graceful handling of build failures
+- **INFORMATIVE**: Clear error messages for blocked operations
+- **RECOVERY**: Automatic rollback suggestions for failed operations
+
+## Performance
+- **OPTIMIZED**: Parallel execution where safe
+- **CACHED**: Build artifacts and dependencies
+- **EFFICIENT**: Minimal file system operations
+
+## Communication
+- **CLEAR**: Explain what commands will be executed
+- **CONCISE**: Minimal output for routine operations
+- **DETAILED**: Full output for debugging and errors
+- **PROACTIVE**: Suggest improvements and optimizations
