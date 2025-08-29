@@ -1,71 +1,35 @@
 # Cursor Rules for copilot-auto-deploy Repository
 
-## Repository Boundary
+## Repository Boundary (PRIMARY SAFETY RULE)
 - **STRICTLY FORBIDDEN**: Any commands that would navigate outside `~/repos/copilot-auto-deploy`
 - **ALLOWED**: All operations within the repository directory and its subdirectories
 - **REQUIRED**: All file operations must stay within the repository boundary
 
 ## Command Execution Permissions
 
-### Always Allowed (No Confirmation Required)
-- **Development Commands**:
-  - `npm run build`, `npm run dev`, `npm run start`
-  - `npm run test`, `npm run test:watch`, `npm run test:coverage`
-  - `npm run lint`, `npm run lint:fix`
-  - `npm run type-check`, `npm run clean`
-  - `npm run demo:setup`, `npm run demo:deploy`, `npm run demo:cleanup`
-  - `npm install`, `npm ci`, `npm update`
-  - `npx` commands for development tools
+### All Commands Allowed (Within Repository Boundary)
+- **ALLOWED**: Any command that operates within the repository directory
+- **NO RESTRICTIONS**: No allowlist or confirmation required for commands within the repo
+- **FLEXIBLE**: Full development freedom within the repository boundary
 
-- **File Operations**:
-  - Reading any file within the repository
-  - Creating new files within the repository
-  - Editing existing files within the repository
-  - Deleting files within the repository (with safety checks)
-
-- **Git Operations** (within repository):
-  - `git status`, `git log`, `git diff`, `git show`
-  - `git add`, `git commit` (with meaningful messages)
-  - `git branch`, `git checkout`, `git merge`
-  - `git pull`, `git push` (to appropriate remotes)
-
-- **Build Tools**:
-  - `tsup` (TypeScript bundling)
-  - `tsx` (TypeScript execution)
-  - `vitest` (testing)
-  - `eslint` (linting)
-  - `prettier` (formatting)
-
-### Require Confirmation
-- **Destructive Operations**:
-  - `git reset --hard`, `git clean -fd`
-  - `rm -rf` commands
-  - `npm uninstall` (package removal)
-  - Any commands that modify system files outside the repository
-
-- **External Operations**:
-  - AWS CLI commands (copilot, aws, etc.)
-  - Docker commands
-  - Network requests or API calls
-  - Installation of global packages
-
-## Safety Measures
-
-### Navigation Restrictions
+### Navigation Restrictions (CRITICAL SAFETY)
 - **BLOCKED**: `cd ..`, `cd ~`, `cd /`, or any navigation outside repository
 - **ALLOWED**: `cd` within repository subdirectories
 - **ENFORCED**: Working directory must always be within `~/repos/copilot-auto-deploy`
 
-### File Operation Safety
-- **REQUIRED**: Backup confirmation for major file deletions
+## Safety Measures
+
+### Repository Boundary Enforcement
+- **PRIMARY RULE**: Never allow operations outside `~/repos/copilot-auto-deploy`
 - **ENFORCED**: All file paths must be relative to repository root
-- **PROTECTED**: Configuration files (.git, package.json, etc.) require explicit confirmation for major changes
+- **PROTECTED**: Configuration files (.git, package.json, etc.) - use caution but no explicit confirmation required
 
 ### Development Workflow
 - **ENCOURAGED**: Use npm scripts from package.json
 - **SUPPORTED**: TypeScript development with hot reload
 - **ENABLED**: Testing and linting workflows
 - **ALLOWED**: Git workflow operations
+- **FLEXIBLE**: Any development tool or command within the repo
 
 ## Error Handling
 - **AUTOMATIC**: Retry failed npm installs
