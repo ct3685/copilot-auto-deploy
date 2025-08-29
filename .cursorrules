@@ -1,0 +1,49 @@
+# Cursor Rules for copilot-auto-deploy Repository
+
+## Repository Boundary (PRIMARY SAFETY RULE)
+- **STRICTLY FORBIDDEN**: Any commands that would navigate outside `~/repos/copilot-auto-deploy`
+- **ALLOWED**: All operations within the repository directory and its subdirectories
+- **REQUIRED**: All file operations must stay within the repository boundary
+
+## Command Execution Permissions
+
+### All Commands Allowed (Within Repository Boundary)
+- **ALLOWED**: Any command that operates within the repository directory
+- **NO RESTRICTIONS**: No allowlist or confirmation required for commands within the repo
+- **FLEXIBLE**: Full development freedom within the repository boundary
+
+### Navigation Restrictions (CRITICAL SAFETY)
+- **BLOCKED**: `cd ..`, `cd ~`, `cd /`, or any navigation outside repository
+- **ALLOWED**: `cd` within repository subdirectories
+- **ENFORCED**: Working directory must always be within `~/repos/copilot-auto-deploy`
+
+## Safety Measures
+
+### Repository Boundary Enforcement
+- **PRIMARY RULE**: Never allow operations outside `~/repos/copilot-auto-deploy`
+- **ENFORCED**: All file paths must be relative to repository root
+- **PROTECTED**: Configuration files (.git, package.json, etc.) - use caution but no explicit confirmation required
+
+### Development Workflow
+- **ENCOURAGED**: Use npm scripts from package.json
+- **SUPPORTED**: TypeScript development with hot reload
+- **ENABLED**: Testing and linting workflows
+- **ALLOWED**: Git workflow operations
+- **FLEXIBLE**: Any development tool or command within the repo
+
+## Error Handling
+- **AUTOMATIC**: Retry failed npm installs
+- **SAFE**: Graceful handling of build failures
+- **INFORMATIVE**: Clear error messages for blocked operations
+- **RECOVERY**: Automatic rollback suggestions for failed operations
+
+## Performance
+- **OPTIMIZED**: Parallel execution where safe
+- **CACHED**: Build artifacts and dependencies
+- **EFFICIENT**: Minimal file system operations
+
+## Communication
+- **CLEAR**: Explain what commands will be executed
+- **CONCISE**: Minimal output for routine operations
+- **DETAILED**: Full output for debugging and errors
+- **PROACTIVE**: Suggest improvements and optimizations
