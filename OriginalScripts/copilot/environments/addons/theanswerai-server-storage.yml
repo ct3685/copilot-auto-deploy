@@ -1,0 +1,95 @@
+Parameters:
+    App:
+        Type: String
+        Description: Your application's name.
+    Env:
+        Type: String
+        Description: The name of the environment being deployed.
+
+Resources:
+    theansweraiserverstorageBucket:
+        Metadata:
+            'aws:copilot:description': 'An Amazon S3 bucket, theanswerai-server-storage, for storing and retrieving objects'
+        Type: AWS::S3::Bucket
+        Properties:
+            VersioningConfiguration:
+                Status: Enabled
+            AccessControl: Private
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                    - ServerSideEncryptionByDefault:
+                          SSEAlgorithm: AES256
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
+            OwnershipControls:
+                Rules:
+                    - ObjectOwnership: BucketOwnerEnforced
+            LifecycleConfiguration:
+                Rules:
+                    - Id: ExpireNonCurrentObjects
+                      Status: Enabled
+                      NoncurrentVersionExpirationInDays: 30
+                      AbortIncompleteMultipartUpload:
+                          DaysAfterInitiation: 1
+            CorsConfiguration:
+                CorsRules:
+                    - AllowedHeaders:
+                          - '*'
+                      AllowedMethods:
+                          - GET
+                          - PUT
+                          - POST
+                          - DELETE
+                      AllowedOrigins:
+                          - 'http://web:3000'
+                          - 'http://flowise:4000'
+                          - 'https://staging.*.theanswer.ai'
+                          - 'https://api.staging.*.theanswer.ai'
+                          - 'https://web.staging.*.theanswer.ai'
+                          - 'https://flowise.staging.*.theanswer.ai'
+                          - 'https://*.theanswer.ai'
+                          - 'https://api.*.theanswer.ai'
+                          - 'https://web.*.theanswer.ai'
+                          - 'https://flowise.*.theanswer.ai'
+                      ExposedHeaders: []
+
+    theansweraiserverstorageBucketPolicy:
+        Metadata:
+            'aws:copilot:description': 'A bucket policy to deny unencrypted access to the bucket and its contents'
+        Type: AWS::S3::BucketPolicy
+        DeletionPolicy: Retain
+        Properties:
+            PolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                    - Sid: ForceHTTPS
+                      Effect: Deny
+                      Principal: '*'
+                      Action: 's3:*'
+                      Resource:
+                          - !Sub ${ theansweraiserverstorageBucket.Arn}/*
+                          - !Sub ${ theansweraiserverstorageBucket.Arn}
+                      Condition:
+                          Bool:
+                              'aws:SecureTransport': false
+            Bucket: !Ref theansweraiserverstorageBucket
+
+Outputs:
+    theansweraiserverstorageName:
+        Description: 'The name of a user-defined bucket.'
+        Value: !Ref theansweraiserverstorageBucket
+        Export:
+            Name: !Sub ${App}-${Env}-theansweraiserverstorageBucketName
+    theansweraiserverstorageBucketARN:
+        Description: 'The ARN of the theanswerai-server-storage bucket.'
+        Value: !GetAtt theansweraiserverstorageBucket.Arn
+        Export:
+            Name: !Sub ${App}-${Env}-theansweraiserverstorageBucketARN
+    theansweraiserverstorageBucketRegion:
+        Description: 'The AWS region where the theanswerai-server-storage bucket is deployed.'
+        Value: !Ref AWS::Region
+        Export:
+            Name: !Sub ${App}-${Env}-theansweraiserverstorageBucketRegion

@@ -1,0 +1,97 @@
+# The manifest for the "web" service.
+# Read the full specification for the "Load Balanced Web Service" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: web
+type: Load Balanced Web Service
+
+# Distribute traffic to your service.
+http:
+    # Requests to this path will be forwarded to your service.
+    path: '/'
+    # Temporarily disabled has issues at this time.
+    # healthcheck: '/api/auth/session'
+    # Health check - simple endpoint that ALWAYS works
+    healthcheck: '/healthcheck'
+    # Domain aliases configured in environment-specific overrides below
+    # Disable stickiness for now
+    # stickiness: true
+
+# Configuration for your containers and service.
+image:
+    # Docker build arguments
+    build:
+        dockerfile: ./apps/web/Dockerfile
+        context: .
+        args:
+            AUTH0_BASE_URL: ${AUTH0_BASE_URL}
+            # BWS_ACCESS_TOKEN: ${BWS_ACCESS_TOKEN}
+    # Port exposed through your container to route traffic to it.
+    port: 3000
+
+# Resource configuration moved to environment-specific overrides below
+exec: true # Enable running commands in your container
+
+# Enable Service Connect for intra-environment traffic between services
+network:
+    connect: true
+    vpc:
+        security_groups:
+            - from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-flowiseclusterSecurityGroup
+            - from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-RedisWorkloadSecurityGroup
+
+# Load environment-specific variables from file
+env_file: copilot.${COPILOT_APPLICATION_NAME}.web.env
+
+# Database secret from AWS Secrets Manager
+secrets:
+    DATABASE_SECRET:
+        from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-flowiseclusterAuroraSecret
+
+# Configuration variables required for the web service
+variables: # Pass environment variables as key value pairs.
+    NUMBER_OF_PROXIES: '1'
+    NODE_ENV: production
+    PORT: '3000'
+    HOSTNAME: '0.0.0.0'
+    NEXT_TELEMETRY_DISABLED: '1'
+    AUTH0_DEBUG: 'false' # Disable Auth0 debugging in production
+    AUTH0_BASE_URL: ${AUTH0_BASE_URL}
+    ANSWERAI_DOMAIN: 'http://web:3000'
+    FLOWISE_DOMAIN: 'http://flowise:4000'
+    DOMAIN: 'http://flowise:4000'
+    # External API endpoint for OAuth callbacks, MCP tools, and external integrations
+    API_HOST: 'https://api.${CLIENT_DOMAIN}'
+    # Database separation: Web service uses different database than Flowise
+    WEB_DATABASE_NAME: 'web' # Override flowise database name from shared secret
+    REDIS_URL:
+        from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-RedisURL
+
+# Environment-specific overrides
+environments:
+    # Standalone: Separate account deployment (independent accounts)
+    staging:
+        cpu: 1024 # Number of CPU units for the task
+        memory: 2048 # Amount of memory in MiB used by the task
+        count: 1 # Number of tasks that should be running in your service
+        http:
+            alias:
+                # Service aliases for standalone account strategy
+                - web.${CLIENT_DOMAIN}
+                - ${CLIENT_DOMAIN}
+    prod:
+        cpu: 2048 # Number of CPU units for the task
+        memory: 4096 # Amount of memory in MiB used by the task
+        count: 1 # Number of tasks that should be running in your service
+        http:
+            alias:
+                # Service aliases for standalone account strategy
+                - web.${CLIENT_DOMAIN}
+                - ${CLIENT_DOMAIN}
+
+# Configure deployment strategy
+deployment:
+    # Can be 'recreate' for faster deployment but may cause downtime - use only for staging/testing
+    # Default is rolling deployments based on health checks (production-safe)
+    rolling: 'default'

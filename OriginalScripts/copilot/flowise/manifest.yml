@@ -1,0 +1,117 @@
+# The manifest for the "flowise" service.
+# Read the full specification for the "Load Balanced Web Service" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: flowise
+type: Load Balanced Web Service
+
+# Distribute traffic to your service.
+http:
+    # Requests to this path will be forwarded to your service.
+    # To match all requests you can use the "/" path.
+    path: '/'
+    # You can specify a custom health check path. The default is "/".
+    healthcheck: '/api/v1/ping'
+    # Domain aliases configured in environment-specific overrides below
+    stickiness: true
+
+# Configuration for your containers and service.
+image:
+    # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#image-build
+    build: Dockerfile
+
+    # Port exposed through your container to route traffic to it.
+    port: 4000
+
+# Resource configuration moved to environment-specific overrides below
+exec: true # Enable running commands in your container.
+network:
+    connect: true # Enable Service Connect for intra-environment traffic between services.
+    vpc:
+        security_groups:
+            - from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-flowiseclusterSecurityGroup
+            - from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-RedisWorkloadSecurityGroup
+
+storage:
+    volumes:
+        myManagedEFSVolume:
+            efs: true
+            path: /var/efs
+            read_only: false
+
+# Lacework sidecar configuration
+sidecars:
+    datacollector-sidecar:
+        image: lacework/datacollector:latest-sidecar
+        essential: false
+
+# Task definition overrides for Lacework integration
+taskdef_overrides:
+    # Override main container entrypoint to use Lacework sidecar script and then start the app
+    - path: ContainerDefinitions[0].EntryPoint
+      value: ['/bin/sh', '-c', '(/var/lib/lacework-backup/lacework-sidecar.sh || true); cd /app/packages/server && exec pnpm start']
+
+    # Add volume mount from sidecar to main container
+    - path: ContainerDefinitions[0].VolumesFrom
+      value:
+          - sourceContainer: datacollector-sidecar
+            readOnly: true
+
+# Optional fields for more advanced use-cases.
+variables: # Pass environment variables as key value pairs.
+    NODE_ENV: 'production'
+    PORT: '4000'
+    # Database type (required for DataSource initialization)
+    DATABASE_TYPE: 'postgres'
+    NUMBER_OF_PROXIES: '1'
+    CHATFLOW_DOMAIN: 'http://flowise:4000'
+    DOMAIN: 'http://flowise:4000'
+    FLOWISE_DOMAIN: 'http://flowise:4000'
+    ANSWERAI_DOMAIN: 'http://web:3000'
+    STORAGE_TYPE: 's3'
+    S3_STORAGE_BUCKET_NAME:
+        from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-theansweraiserverstorageBucketName
+    # Optional: S3 region (defaults to us-east-1 if not provided)
+    S3_STORAGE_REGION:
+        from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-theansweraiserverstorageBucketRegion
+    AAI_DEFAULT_REDIS_URL:
+        from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-RedisURL
+    REDIS_URL:
+        from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-RedisURL
+    # Lacework configuration variables - will be loaded from env file (COMMENTED OUT FOR NOW)
+    LaceworkVerbose: 'true'
+
+env_file: copilot.${COPILOT_APPLICATION_NAME}.env
+
+secrets:
+    DATABASE_SECRET:
+        from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-flowiseclusterAuroraSecret
+
+# Environment-specific overrides
+environments:
+    # Separate account deployments (independent accounts)
+    staging:
+        cpu: 2048 # Number of CPU units for the task.
+        memory: 4096 # Amount of memory in MB used by the task.
+        count: 1 # Number of tasks that should be running in your service.
+        http:
+            alias:
+                # Service aliases for standalone account strategy
+                - flowise.${CLIENT_DOMAIN}
+                - api.${CLIENT_DOMAIN}
+    prod:
+        cpu: 4096 # Number of CPU units for the task.
+        memory: 8192 # Amount of memory in MB used by the task.
+        count: 1 # Number of tasks that should be running in your service.
+        http:
+            alias:
+                # Service aliases for standalone account strategy
+                - flowise.${CLIENT_DOMAIN}
+                - api.${CLIENT_DOMAIN}
+
+# Configure deployment strategy
+deployment:
+    # Can be 'recreate' for faster deployment but may cause downtime - use only for staging/testing
+    # Default is rolling deployments based on health checks (production-safe)
+    rolling: 'default'
